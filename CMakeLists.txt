@@ -14,5 +14,11 @@ set(SDL2_IMAGE_PATH "C:/SDL2_image-2.8.2-mingw/x86_64-w64-mingw32")
 find_package(SDL2_image REQUIRED)
 include_directories(${SDL2_IMAGE_INCLUDE_DIRS})
 
-add_executable(Chip8_Emulator_C main.c)
+add_executable(Chip8_Emulator_C main.c
+        memory.c
+        memory.h
+        display.c
+        display.h
+)
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -mconsole")
 target_link_libraries(Chip8_Emulator_C ${SDL2_LIBRARY} ${SDL2_IMAGE_LIBRARIES})
