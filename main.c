@@ -2,9 +2,13 @@
 #include <SDL.h>
 #include <SDL_image.h>
 #include <stdint.h>
+#include <windows.h>
+#include <math.h>
 
 #include "display.h"
 #include "memory.h"
+
+#define FPS 60.0
 
 
 int main(int argc, char *argv[]) {
@@ -14,8 +18,8 @@ int main(int argc, char *argv[]) {
     int8_t *V[16]; // 16 8-bit registers
     StackElement *firstElementStack = createStack();
     StackElement *stackPointer = firstElementStack;
-    uint8_t delayTimer;
-    uint8_t soundTimer;
+    uint8_t delayTimer = 0;
+    uint8_t soundTimer = 0;
 
 
     FILE *rom = fopen("D:/C/Chip8-Emulator-C/IBM Logo.ch8", "rb");
@@ -26,7 +30,7 @@ int main(int argc, char *argv[]) {
         rewind(rom);
 
         fread(firstAddressMemory+512, sizeof(uint8_t), rom_length, rom);
-        printf("Loaded ROM!");
+        printf("Loaded ROM!\n");
     }
     else {
         printf("UNSUCCESSFUL LOAD!");
@@ -60,11 +64,6 @@ int main(int argc, char *argv[]) {
     }
 
 
-
-
-
-
-
     SDL_Window *window;
     SDL_Renderer *renderer;
     SDL_Init(SDL_INIT_VIDEO);
@@ -79,9 +78,31 @@ int main(int argc, char *argv[]) {
     renderer = SDL_CreateRenderer(window,-1,SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 
     int done = 0;
+    int j = 0;
     while(!done) {
+        //Timers
+        if(delayTimer > 0) {
+            delayTimer -= 60;
+        }
+
+        if(soundTimer > 0) {
+            Beep(750,1000.0/FPS);
+            soundTimer -= 60;
+        }
+
+        //Fetch cycle
+        char str[100];
+        sprintf(str, "%X%X\n", firstAddressMemory[512+j], firstAddressMemory[512+j+1]);
+        uint16_t instr=strtol(str, NULL, 16);
+        j += 2;
+
+        //Decode cycle
+
+
+
         done = processEvents(window);
         doRender(renderer);
+        SDL_Delay(1000.0/FPS);
     }
 
 
