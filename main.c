@@ -8,14 +8,34 @@
 
 
 int main(int argc, char *argv[]) {
-    void *firstAddressMemory = createMemory();
-    void *PC = firstAddressMemory; //Program counter
-    uint16_t *I; //16-bit index register
+    uint8_t *firstAddressMemory = createMemory();
+    uint8_t *PC = firstAddressMemory; //Program counter
+    uint16_t *indexReg; //16-bit index register
     int8_t *V[16]; // 16 8-bit registers
     StackElement *firstElementStack = createStack();
     StackElement *stackPointer = firstElementStack;
     uint8_t delayTimer;
     uint8_t soundTimer;
+
+
+
+
+    FILE *rom = fopen("D:/C/Chip8-Emulator-C/IBM Logo.ch8", "rb");
+
+    if(rom != NULL) {
+        fseek(rom, 0, SEEK_END);
+        int rom_length = ftell(rom);
+        rewind(rom);
+
+        fread(firstAddressMemory+512, sizeof(uint8_t), rom_length, rom);
+        printf("done!");
+    }
+
+    else {
+        printf("UNSUCCESSFUL LOAD!");
+        return(-1);
+    }
+
 
 
 

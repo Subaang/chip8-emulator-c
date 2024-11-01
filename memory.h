@@ -7,7 +7,7 @@ typedef struct StackElement{
     struct StackElement *next;
 }StackElement;
 
-extern void *createMemory();
+extern uint8_t *createMemory();
 extern StackElement *createStack();
 
 #endif
