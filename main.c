@@ -22,7 +22,7 @@ int main(int argc, char *argv[]) {
 
     uint8_t *firstAddressMemory = createMemory(); //To access any address, use firstMemoryAddress[PC]
     uint16_t PC = 0; //Program counter
-    uint16_t indexReg; //16-bit index register
+    uint16_t indexReg = 0; //16-bit index register
     int8_t V[16]; // 16 8-bit registers
     StackElement *stackTop = NULL;
     uint8_t delayTimer = 0;
@@ -89,6 +89,8 @@ int main(int argc, char *argv[]) {
     int done = 0;
     int j = 0;
     while(!done) {
+
+        //TODO: Find a way to limit instructions per second to 700
         //Timers
         if(delayTimer > 0) {
             delayTimer -= 60;
@@ -118,9 +120,10 @@ int main(int argc, char *argv[]) {
                     break;
 
                     case 0x0000:
-                        printf("End of program");
-                        SDL_Delay(10000);
-                        exit(0);
+                        printf("End of program\n");
+                    break;
+                        // SDL_Delay(10000);
+                        // exit(0);
 
                     default:
                         printf("Skipping 0NNN - %X\n",instr);
@@ -285,18 +288,83 @@ int main(int argc, char *argv[]) {
                         printf("Unknown Skip if key");
                         exit(-1);
                 }
-
             break;
 
+            case 0xF000: // 0xFX__
+                switch(instr & 0x00FF) {
+                    //Timers
+                    case 0x0007:
+                        V[instr & 0x0F00] = delayTimer;
+                    break;
 
+                    case 0x0015:
+                        delayTimer = V[instr & 0x0F00];
+                    break;
 
+                    case 0x0018:
+                        soundTimer = V[instr & 0x0F00];
+                    break;
+
+                    //Add to index
+                    case 0x001E: // Some ambiguous behavior. See guide. Considering overflow here
+                        int temp = indexReg + V[instr & 0x0F00];
+                        indexReg += V[instr & 0x0F00];
+                        if(temp > 0xFFF) {
+                             V[0xF] = 1;
+                        }
+                        else {
+                            V[0xF] = 0;
+                        }
+                    break;
+
+                    //Get key
+                    case 0x000A:
+                        PC -= 2;
+                        if(detectKeyPress()) {
+                            V[instr & 0x0F00] = detectKeyPress();
+                            PC += 2;
+                        }
+                    break;
+
+                    //Font Character
+                    case 0x0029:
+                        indexReg = 80 + V[instr & 0x0F00] * 5;
+                    break;
+
+                    //Binary-coded decimal conversion
+                    case 0x0033:
+                        uint8_t VX = V[instr & 0x0F00];
+                        //Integer division followed by modulo
+                        firstAddressMemory[indexReg] = (VX / 100) % 10;
+                        firstAddressMemory[indexReg+1] = (VX / 10) % 10;
+                        firstAddressMemory[indexReg + 2] = VX % 10;
+                    break;
+
+                    //Store and load memory
+                    //Ambiguous instruction - going with modern approach
+                    case 0x0055:
+                        for(uint16_t i = 0; i < instr & 0x0F00; i++) {
+                            firstAddressMemory[indexReg + i] = V[i];
+                        }
+                    break;
+
+                    case 0x0065:
+                        for(uint16_t i = 0; i < instr & 0x0F00; i++) {
+                            V[i] = firstAddressMemory[indexReg + i];
+                        }
+                    break;
+
+                    default:
+                        printf("Unknown F instruction!");
+                        exit(-1);
+                }
+            break;
 
             default:
                 printf("Unknown opcode %X \n",instr);
                 SDL_Delay(10000);
                 exit(EXIT_FAILURE);
         }
-
 
         done = processEvents(window);
         SDL_Delay(1000.0/FPS);

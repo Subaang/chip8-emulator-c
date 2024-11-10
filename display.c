@@ -6,6 +6,18 @@ bool keyHeldDown(uint8_t VX) {
     return state[VX];
 }
 
+uint8_t detectKeyPress() {
+    SDL_Event event;
+
+    while(SDL_PollEvent(&event)) {
+        if(event.type == SDL_KEYDOWN) {
+            return event.key.keysym.sym;
+        }
+    }
+    return NULL;
+
+}
+
 int processEvents(SDL_Window *window) {
     SDL_Event event;
     int done = 0;
@@ -32,10 +44,6 @@ int processEvents(SDL_Window *window) {
                 done = 1;
         }
     }
-
-    const uint8_t *state = SDL_GetKeyboardState(NULL);
-    if(state[SDL_SCANCODE_1])
-
 
     return done;
 }
