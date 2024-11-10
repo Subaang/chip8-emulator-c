@@ -8,6 +8,7 @@ typedef struct StackElement{
 }StackElement;
 
 extern uint8_t *createMemory();
-extern StackElement *createStack();
+extern void pushStack(StackElement *top, uint16_t data);
+extern uint16_t popStack(StackElement *top);
 
 #endif

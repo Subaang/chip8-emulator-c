@@ -39,6 +39,9 @@ void draw(SDL_Renderer *renderer, uint16_t indexReg, uint16_t instr, uint8_t *V,
     int y = V[instr & 0x00F0] % 32;
     V[0xF] = 0;
 
+    // int spriteWidth = 8; int xOffset = (64 - spriteWidth) / 2; int yOffset = (32 - N) / 2; x = og_x + xOffset; y += yOffset;
+    // Above line sets offset.  Examine later
+
    for(int i = 0; i < N; i++) {
        uint8_t Nth_byte_sprite_data = firstAddressMemory[indexReg + i];
 

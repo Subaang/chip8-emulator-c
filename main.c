@@ -16,8 +16,7 @@ int main(int argc, char *argv[]) {
     uint16_t PC = 0; //Program counter
     uint16_t indexReg; //16-bit index register
     int8_t V[16]; // 16 8-bit registers
-    StackElement *firstElementStack = createStack();
-    StackElement *stackPointer = firstElementStack;
+    StackElement *stackTop = NULL;
     uint8_t delayTimer = 0;
     uint8_t soundTimer = 0;
 
@@ -92,11 +91,6 @@ int main(int argc, char *argv[]) {
             soundTimer -= 60;
         }
 
-        //Fetch cycle
-        // char str[100];
-        // sprintf(str, "%X%X\n", firstAddressMemory[512+j], firstAddressMemory[512+j+1]);
-        // uint16_t instr = strtol(str, NULL, 16);
-        // j += 2;
 
         uint16_t instr = (firstAddressMemory[512+PC] << 8) | firstAddressMemory[512+PC+1];
         PC += 2;
@@ -111,8 +105,13 @@ int main(int argc, char *argv[]) {
                     break;
 
                     case 0x00EE:
-                        //Return from subroutine
-                        break;
+                        PC = popStack(stackTop);
+                    break;
+
+                    case 0x0000:
+                        printf("End of program");
+                        SDL_Delay(10000);
+                        exit(0);
 
                     default:
                         printf("Skipping 0NNN - %X\n",instr);
@@ -123,6 +122,10 @@ int main(int argc, char *argv[]) {
             case 0x1000: //Jump
                 PC = instr & 0x0FFF;
             break;
+
+            case 0x2000: //Call subroutine at NNN
+                pushStack(stackTop,PC);
+                PC = instr & 0x0FFF;
 
             case 0x6000: //Set register VX
                 V[instr & 0x0F00] = instr & 0x00FF;
@@ -145,7 +148,8 @@ int main(int argc, char *argv[]) {
 
             default:
                 printf("Unknown opcode %X \n",instr);
-               // exit(EXIT_FAILURE);
+                SDL_Delay(10000);
+                exit(EXIT_FAILURE);
         }
 
 
