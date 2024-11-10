@@ -100,7 +100,8 @@ int main(int argc, char *argv[]) {
         switch(instr & 0xF000) {
             case 0x0000:
                 switch(instr & 0x0FFF) {
-                    case 0x00E0: //Clear screen
+                    //Clear screen
+                    case 0x00E0:
                         SDL_RenderClear(renderer);
                     break;
 
@@ -119,26 +120,61 @@ int main(int argc, char *argv[]) {
                 }
             break;
 
-            case 0x1000: //Jump
+            //Jump
+            case 0x1000:
                 PC = instr & 0x0FFF;
             break;
 
-            case 0x2000: //Call subroutine at NNN
+            //Call subroutine at NNN
+            case 0x2000:
                 pushStack(stackTop,PC);
                 PC = instr & 0x0FFF;
+            break;
 
-            case 0x6000: //Set register VX
+            //Conditional skip
+            case 0x3000:
+                if(V[instr & 0x0F00] == instr & 0x00FF) {
+                    PC += 2;
+                }
+            break;
+
+            //Conditional skip
+            case 0x4000:
+                if(V[instr & 0x0F00] != instr & 0x00FF) {
+                    PC += 2;
+                }
+            break;
+
+            //Conditional skip
+            case 0x5000:
+                if(V[instr & 0x0F00] == V[instr & 0x00F0]) {
+                    PC += 2;
+                }
+            break;
+
+            //Conditional skip
+            case 0x9000:
+                if(V[instr & 0x0F00] != V[instr & 0x00F0]) {
+                    PC += 2;
+                }
+            break;
+
+            //Set register VX
+            case 0x6000:
                 V[instr & 0x0F00] = instr & 0x00FF;
             break;
 
-            case 0x7000: //Add value to reg VX
+            //Add value to reg VX
+            case 0x7000:
                 V[instr & 0x0F00] += instr & 0x00FF;
             break;
 
-            case 0xA000: //Set index reg
+            //Set index reg
+            case 0xA000:
                 indexReg = instr & 0x0FFF;
             break;
 
+            //Display DXYN
             case 0xD000:
                 draw(renderer,indexReg,instr,V,firstAddressMemory,displayArr);
                 break;
