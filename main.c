@@ -169,6 +169,77 @@ int main(int argc, char *argv[]) {
                 V[instr & 0x0F00] += instr & 0x00FF;
             break;
 
+            //Set
+            case 0x8000:
+                switch(instr & 0x000F) {
+                    case 0x0000:
+                        V[instr & 0x0F00] = V[instr & 0x00F0];
+                    break;
+
+                    case 0x0001:
+                        V[instr & 0x0F00] |= V[instr & 0x00F0];
+                    break;
+
+                    case 0x0002:
+                        V[instr & 0x0F00] &= V[instr & 0x00F0];
+                    break;
+
+                    case 0x0003:
+                        V[instr & 0x0F00] ^= V[instr & 0x00F0];
+                    break;
+
+                    case 0x0004:
+                        int temp = V[instr & 0x0F00] + V[instr & 0x00F0];
+                        V[instr & 0x0F00] += V[instr & 0x00F0]; //unsigned int8 wraps back to 0 if overflow
+
+                        if(temp > 255) {
+                            V[0xF] = 1;
+                        }
+                        else {
+                            V[0xF] = 0;
+                        }
+                    break;
+
+                    case 0x0005:
+                        if(V[instr & 0x0F00] > V[instr & 0x00F0]) {
+                            V[0xF] = 1;
+                        }
+                        else {
+                            V[0xF] = 0;
+                        }
+
+                        V[instr & 0x0F00] = V[instr & 0x0F00] - V[instr & 0x00F0];
+
+                    break;
+
+                    case 0x0007:
+                        if(V[instr & 0x0F00] > V[instr & 0x00F0]) {
+                            V[0xF] = 1;
+                        }
+                        else {
+                            V[0xF] = 0;
+                        }
+
+                    V[instr & 0x0F00] = V[instr & 0x00F0] - V[instr & 0x0F00];
+
+                    case 0x0006: //Modern implementation for ambiguous instruction
+                        V[0xF] = V[instr & 0x0F00] & 1;
+                        V[instr & 0x0F00] = V[instr & 0x0F00] >> 1;
+                    break;
+
+                    case 0x000E:
+                        V[0xF] = V[instr & 0x0F00] & (1 << 4);
+                        V[instr & 0x0F00] = V[instr & 0x0F00] << 1;
+                    break;
+
+                    default:
+                        printf("Unknown shift");
+                        exit(-1);
+                }
+
+
+
+
             //Set index reg
             case 0xA000:
                 indexReg = instr & 0x0FFF;
