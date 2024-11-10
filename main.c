@@ -12,14 +12,16 @@
 
 
 int main(int argc, char *argv[]) {
-    uint8_t *firstAddressMemory = createMemory();
-    uint8_t *PC = firstAddressMemory; //Program counter
-    uint16_t *indexReg; //16-bit index register
-    int8_t *V[16]; // 16 8-bit registers
+    uint8_t *firstAddressMemory = createMemory(); //To access any address, use firstMemoryAddress[PC]
+    uint16_t PC = 0; //Program counter
+    uint16_t indexReg; //16-bit index register
+    int8_t V[16]; // 16 8-bit registers
     StackElement *firstElementStack = createStack();
     StackElement *stackPointer = firstElementStack;
     uint8_t delayTimer = 0;
     uint8_t soundTimer = 0;
+
+    uint64_t displayArr[32] = {0}; //Use to hold a monochromatic screen as an array. use bitshifts
 
 
     FILE *rom = fopen("D:/C/Chip8-Emulator-C/IBM Logo.ch8", "rb");
@@ -34,7 +36,7 @@ int main(int argc, char *argv[]) {
     }
     else {
         printf("UNSUCCESSFUL LOAD!");
-        return(-1);
+        return(EXIT_FAILURE);
     }
 
     //Fonts
@@ -75,7 +77,7 @@ int main(int argc, char *argv[]) {
                             480,
                             0);
 
-    renderer = SDL_CreateRenderer(window,-1,SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+    renderer = SDL_CreateRenderer(window,-1,SDL_RENDERER_ACCELERATED);
 
     int done = 0;
     int j = 0;
@@ -91,19 +93,66 @@ int main(int argc, char *argv[]) {
         }
 
         //Fetch cycle
-        char str[100];
-        sprintf(str, "%X%X\n", firstAddressMemory[512+j], firstAddressMemory[512+j+1]);
-        uint16_t instr=strtol(str, NULL, 16);
-        j += 2;
+        // char str[100];
+        // sprintf(str, "%X%X\n", firstAddressMemory[512+j], firstAddressMemory[512+j+1]);
+        // uint16_t instr = strtol(str, NULL, 16);
+        // j += 2;
 
-        //Decode cycle
+        uint16_t instr = (firstAddressMemory[512+PC] << 8) | firstAddressMemory[512+PC+1];
+        PC += 2;
 
+
+        //Decode and Execute cycle
+        switch(instr & 0xF000) {
+            case 0x0000:
+                switch(instr & 0x0FFF) {
+                    case 0x00E0: //Clear screen
+                        SDL_RenderClear(renderer);
+                    break;
+
+                    case 0x00EE:
+                        //Return from subroutine
+                        break;
+
+                    default:
+                        printf("Skipping 0NNN - %X\n",instr);
+
+                }
+            break;
+
+            case 0x1000: //Jump
+                PC = instr & 0x0FFF;
+            break;
+
+            case 0x6000: //Set register VX
+                V[instr & 0x0F00] = instr & 0x00FF;
+            break;
+
+            case 0x7000: //Add value to reg VX
+                V[instr & 0x0F00] += instr & 0x00FF;
+            break;
+
+            case 0xA000: //Set index reg
+                indexReg = instr & 0x0FFF;
+            break;
+
+            case 0xD000:
+                draw(renderer,indexReg,instr,V,firstAddressMemory,displayArr);
+                break;
+
+
+
+
+            default:
+                printf("Unknown opcode %X \n",instr);
+               // exit(EXIT_FAILURE);
+        }
 
 
         done = processEvents(window);
-        doRender(renderer);
         SDL_Delay(1000.0/FPS);
     }
+
 
 
     SDL_DestroyWindow(window);

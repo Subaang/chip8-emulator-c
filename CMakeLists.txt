@@ -19,8 +19,6 @@ add_executable(Chip8_Emulator_C main.c
         memory.h
         display.c
         display.h
-        decode.c
-        decode.h
 )
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -mconsole")
 target_link_libraries(Chip8_Emulator_C ${SDL2_LIBRARY} ${SDL2_IMAGE_LIBRARIES})
