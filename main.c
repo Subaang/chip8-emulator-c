@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <windows.h>
 #include <math.h>
+#include <time.h>
 
 #include "display.h"
 #include "memory.h"
@@ -11,7 +12,14 @@
 #define FPS 60.0
 
 
+int randInRange(int min, int max)
+{
+    return min + (int) (rand() / (double) (RAND_MAX + 1) * (max - min + 1));
+}
+
+
 int main(int argc, char *argv[]) {
+
     uint8_t *firstAddressMemory = createMemory(); //To access any address, use firstMemoryAddress[PC]
     uint16_t PC = 0; //Program counter
     uint16_t indexReg; //16-bit index register
@@ -22,7 +30,7 @@ int main(int argc, char *argv[]) {
 
     uint64_t displayArr[32] = {0}; //Use to hold a monochromatic screen as an array. use bitshifts
 
-
+    srand(time(NULL));
     FILE *rom = fopen("D:/C/Chip8-Emulator-C/IBM Logo.ch8", "rb");
 
     if(rom != NULL) {
@@ -227,7 +235,7 @@ int main(int argc, char *argv[]) {
                         V[instr & 0x0F00] = V[instr & 0x0F00] >> 1;
                     break;
 
-                    case 0x000E:
+                    case 0x000E: //Modern implementation for ambiguous instruction
                         V[0xF] = V[instr & 0x0F00] & (1 << 4);
                         V[instr & 0x0F00] = V[instr & 0x0F00] << 1;
                     break;
@@ -236,19 +244,49 @@ int main(int argc, char *argv[]) {
                         printf("Unknown shift");
                         exit(-1);
                 }
-
-
-
+            break;
 
             //Set index reg
             case 0xA000:
                 indexReg = instr & 0x0FFF;
             break;
 
+            //Jump with offset
+            case 0xB000: //Older implementation for ambiguous instruction
+                PC = instr & 0x0FFF + V[0];
+            break;
+
+            //Random
+            case 0xC000:
+                V[instr & 0x0F00] = randInRange(0, instr & 0x00FF) & (instr & 0x00FF);
+            break;
+
             //Display DXYN
             case 0xD000:
                 draw(renderer,indexReg,instr,V,firstAddressMemory,displayArr);
                 break;
+
+            //Skip if key
+            case 0xE000:
+                switch(instr & 0x00FF) {
+                    case 0x009E:
+                        if(keyHeldDown(V[instr & 0x0F00])){
+                            PC += 2;
+                        }
+                    break;
+
+                    case 0x00A1:
+                        if(!keyHeldDown(V[instr & 0x0F00])){
+                            PC += 2;
+                        }
+                    break;
+
+                    default:
+                        printf("Unknown Skip if key");
+                        exit(-1);
+                }
+
+            break;
 
 
 

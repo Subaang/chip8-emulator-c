@@ -1,6 +1,10 @@
 #include "display.h"
 #include <stdio.h>
 
+bool keyHeldDown(uint8_t VX) {
+    const uint8_t *state = SDL_GetKeyboardState(NULL);
+    return state[VX];
+}
 
 int processEvents(SDL_Window *window) {
     SDL_Event event;
@@ -28,6 +32,11 @@ int processEvents(SDL_Window *window) {
                 done = 1;
         }
     }
+
+    const uint8_t *state = SDL_GetKeyboardState(NULL);
+    if(state[SDL_SCANCODE_1])
+
+
     return done;
 }
 
