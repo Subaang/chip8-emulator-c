@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <SDL.h>
-#include <SDL_image.h>
 #include <stdint.h>
 #include <windows.h>
 #include <math.h>
@@ -21,9 +20,9 @@ int randInRange(int min, int max)
 int main(int argc, char *argv[]) {
 
     uint8_t *firstAddressMemory = createMemory(); //To access any address, use firstMemoryAddress[PC]
-    uint16_t PC = 0; //Program counter
+    uint16_t PC = 0x200; //Program counter
     uint16_t indexReg = 0; //16-bit index register
-    int8_t V[16]; // 16 8-bit registers
+    int8_t V[16] = {0}; // 16 8-bit registers
     StackElement *stackTop = NULL;
     uint8_t delayTimer = 0;
     uint8_t soundTimer = 0;
@@ -31,7 +30,7 @@ int main(int argc, char *argv[]) {
     uint64_t displayArr[32] = {0}; //Use to hold a monochromatic screen as an array. use bitshifts
 
     srand(time(NULL));
-    FILE *rom = fopen("D:/C/Chip8-Emulator-C/IBM Logo.ch8", "rb");
+    FILE *rom = fopen("D:/C/Chip8-Emulator-C/4-flags.ch8", "rb");
 
     if(rom != NULL) {
         fseek(rom, 0, SEEK_END);
@@ -68,10 +67,10 @@ int main(int argc, char *argv[]) {
     };
 
     int k = 0;
-    for(int i = 80; i < 160; i++) { //Store fonts from 0x50 to 0x9F (inclusive)
+    for(int i = 0x50; i < 0x50 + 80; i++) {
         firstAddressMemory[i] = fontset[k];
+        k++;
     }
-
 
     SDL_Window *window;
     SDL_Renderer *renderer;
@@ -87,7 +86,6 @@ int main(int argc, char *argv[]) {
     renderer = SDL_CreateRenderer(window,-1,SDL_RENDERER_ACCELERATED);
 
     int done = 0;
-    int j = 0;
     while(!done) {
 
         //TODO: Find a way to limit instructions per second to 700
@@ -102,9 +100,10 @@ int main(int argc, char *argv[]) {
         }
 
 
-        uint16_t instr = (firstAddressMemory[512+PC] << 8) | firstAddressMemory[512+PC+1];
+        uint16_t instr = (firstAddressMemory[PC] << 8) | firstAddressMemory[PC+1];
         PC += 2;
 
+        printf("Executing : %X\n", instr);
 
         //Decode and Execute cycle
         switch(instr & 0xF000) {
@@ -116,14 +115,14 @@ int main(int argc, char *argv[]) {
                     break;
 
                     case 0x00EE:
-                        PC = popStack(stackTop);
+                        PC = popStack(&stackTop);
+
                     break;
 
                     case 0x0000:
                         printf("End of program\n");
                     break;
-                        // SDL_Delay(10000);
-                        // exit(0);
+
 
                     default:
                         printf("Skipping 0NNN - %X\n",instr);
@@ -138,70 +137,64 @@ int main(int argc, char *argv[]) {
 
             //Call subroutine at NNN
             case 0x2000:
-                pushStack(stackTop,PC);
+                pushStack(&stackTop,PC);
                 PC = instr & 0x0FFF;
             break;
 
             //Conditional skip
             case 0x3000:
-                if(V[instr & 0x0F00] == instr & 0x00FF) {
+                if(V[(instr & 0x0F00) >> 8] == instr & 0x00FF) {
                     PC += 2;
                 }
             break;
 
             //Conditional skip
             case 0x4000:
-                if(V[instr & 0x0F00] != instr & 0x00FF) {
+                if(V[(instr & 0x0F00) >> 8] != instr & 0x00FF) {
                     PC += 2;
                 }
             break;
 
             //Conditional skip
             case 0x5000:
-                if(V[instr & 0x0F00] == V[instr & 0x00F0]) {
-                    PC += 2;
-                }
-            break;
-
-            //Conditional skip
-            case 0x9000:
-                if(V[instr & 0x0F00] != V[instr & 0x00F0]) {
+                if(V[(instr & 0x0F00) >> 8] == V[(instr & 0x00F0) >> 4]) {
                     PC += 2;
                 }
             break;
 
             //Set register VX
             case 0x6000:
-                V[instr & 0x0F00] = instr & 0x00FF;
+                V[(instr & 0x0F00) >> 8] = instr & 0x00FF;
             break;
 
             //Add value to reg VX
             case 0x7000:
-                V[instr & 0x0F00] += instr & 0x00FF;
+                V[(instr & 0x0F00) >> 8] += instr & 0x00FF;
             break;
 
             //Set
             case 0x8000:
                 switch(instr & 0x000F) {
                     case 0x0000:
-                        V[instr & 0x0F00] = V[instr & 0x00F0];
+                        V[(instr & 0x0F00) >> 8] = V[(instr & 0x00F0) >> 4];
                     break;
 
                     case 0x0001:
-                        V[instr & 0x0F00] |= V[instr & 0x00F0];
+                        V[(instr & 0x0F00) >> 8] |= V[(instr & 0x00F0) >> 4];
                     break;
 
                     case 0x0002:
-                        V[instr & 0x0F00] &= V[instr & 0x00F0];
+                        V[(instr & 0x0F00) >> 8] &= V[(instr & 0x00F0) >> 4];
                     break;
 
                     case 0x0003:
-                        V[instr & 0x0F00] ^= V[instr & 0x00F0];
+                        V[(instr & 0x0F00) >> 8] ^= V[(instr & 0x00F0) >> 4];
                     break;
 
                     case 0x0004:
-                        int temp = V[instr & 0x0F00] + V[instr & 0x00F0];
-                        V[instr & 0x0F00] += V[instr & 0x00F0]; //unsigned int8 wraps back to 0 if overflow
+                        {
+                        int temp = V[(instr & 0x0F00) >> 8] + V[(instr & 0x00F0) >> 4];
+                        V[(instr & 0x0F00) >> 8] += V[(instr & 0x00F0) >> 4]; //unsigned int8 wraps back to 0 if overflow
 
                         if(temp > 255) {
                             V[0xF] = 1;
@@ -209,43 +202,51 @@ int main(int argc, char *argv[]) {
                         else {
                             V[0xF] = 0;
                         }
-                    break;
+                        break;
+                        }
 
                     case 0x0005:
-                        if(V[instr & 0x0F00] > V[instr & 0x00F0]) {
+                        if(V[(instr & 0x0F00) >> 8] >= V[(instr & 0x00F0) >> 4]) {
                             V[0xF] = 1;
                         }
                         else {
                             V[0xF] = 0;
                         }
 
-                        V[instr & 0x0F00] = V[instr & 0x0F00] - V[instr & 0x00F0];
+                        V[(instr & 0x0F00) >> 8] = V[(instr & 0x0F00) >> 8] - V[(instr & 0x00F0) >> 4];
 
                     break;
 
                     case 0x0007:
-                        if(V[instr & 0x0F00] > V[instr & 0x00F0]) {
+                        if(V[(instr & 0x0F00) >> 8] >= V[(instr & 0x00F0) >> 4]) {
                             V[0xF] = 1;
                         }
                         else {
                             V[0xF] = 0;
                         }
-
-                    V[instr & 0x0F00] = V[instr & 0x00F0] - V[instr & 0x0F00];
+                        V[(instr & 0x0F00) >> 8] = V[(instr & 0x00F0) >> 4] - V[(instr & 0x0F00) >> 8];
+                    break;
 
                     case 0x0006: //Modern implementation for ambiguous instruction
-                        V[0xF] = V[instr & 0x0F00] & 1;
-                        V[instr & 0x0F00] = V[instr & 0x0F00] >> 1;
+                        V[0xF] = V[(instr & 0x0F00) >> 8] & 1;
+                        V[(instr & 0x0F00) >> 8] = V[(instr & 0x0F00) >> 8] >> 1;
                     break;
 
                     case 0x000E: //Modern implementation for ambiguous instruction
-                        V[0xF] = V[instr & 0x0F00] & (1 << 4);
-                        V[instr & 0x0F00] = V[instr & 0x0F00] << 1;
+                        V[0xF] = (V[(instr & 0x0F00) >> 8] & 0x80) >> 7;
+                        V[(instr & 0x0F00 >> 8)] = V[(instr & 0x0F00 >> 8)] << 1;
                     break;
 
                     default:
                         printf("Unknown shift");
                         exit(-1);
+                }
+            break;
+
+            //Conditional skip
+            case 0x9000:
+                if(V[(instr & 0x0F00) >> 8] != V[(instr & 0x00F0) >> 4]) {
+                    PC += 2;
                 }
             break;
 
@@ -261,7 +262,7 @@ int main(int argc, char *argv[]) {
 
             //Random
             case 0xC000:
-                V[instr & 0x0F00] = randInRange(0, instr & 0x00FF) & (instr & 0x00FF);
+                V[(instr & 0x0F00) >> 8] = randInRange(0, instr & 0x00FF) & (instr & 0x00FF);
             break;
 
             //Display DXYN
@@ -273,13 +274,13 @@ int main(int argc, char *argv[]) {
             case 0xE000:
                 switch(instr & 0x00FF) {
                     case 0x009E:
-                        if(keyHeldDown(V[instr & 0x0F00])){
+                        if(keyHeldDown(V[(instr & 0x0F00) >> 8])){
                             PC += 2;
                         }
                     break;
 
                     case 0x00A1:
-                        if(!keyHeldDown(V[instr & 0x0F00])){
+                        if(!keyHeldDown(V[(instr & 0x0F00) >> 8])){
                             PC += 2;
                         }
                     break;
@@ -294,46 +295,49 @@ int main(int argc, char *argv[]) {
                 switch(instr & 0x00FF) {
                     //Timers
                     case 0x0007:
-                        V[instr & 0x0F00] = delayTimer;
+                        V[(instr & 0x0F00) >> 8] = delayTimer;
                     break;
 
                     case 0x0015:
-                        delayTimer = V[instr & 0x0F00];
+                        delayTimer = V[(instr & 0x0F00) >> 8];
                     break;
 
                     case 0x0018:
-                        soundTimer = V[instr & 0x0F00];
+                        soundTimer = V[(instr & 0x0F00) >> 8];
                     break;
 
                     //Add to index
                     case 0x001E: // Some ambiguous behavior. See guide. Considering overflow here
-                        int temp = indexReg + V[instr & 0x0F00];
-                        indexReg += V[instr & 0x0F00];
+                    {
+                        int temp = indexReg + V[(instr & 0x0F00) >> 8];
+                        indexReg += V[(instr & 0x0F00) >> 8];
                         if(temp > 0xFFF) {
-                             V[0xF] = 1;
+                            V[0xF] = 1;
                         }
                         else {
                             V[0xF] = 0;
                         }
-                    break;
+                        break;
+                    }
+
 
                     //Get key
                     case 0x000A:
                         PC -= 2;
                         if(detectKeyPress()) {
-                            V[instr & 0x0F00] = detectKeyPress();
+                            V[(instr & 0x0F00) >> 8] = detectKeyPress();
                             PC += 2;
                         }
                     break;
 
                     //Font Character
                     case 0x0029:
-                        indexReg = 80 + V[instr & 0x0F00] * 5;
+                        indexReg = 0x50 + V[(instr & 0x0F00) >> 8] * 5;
                     break;
 
                     //Binary-coded decimal conversion
                     case 0x0033:
-                        uint8_t VX = V[instr & 0x0F00];
+                        uint8_t VX = V[(instr & 0x0F00) >> 8];
                         //Integer division followed by modulo
                         firstAddressMemory[indexReg] = (VX / 100) % 10;
                         firstAddressMemory[indexReg+1] = (VX / 10) % 10;
@@ -343,13 +347,13 @@ int main(int argc, char *argv[]) {
                     //Store and load memory
                     //Ambiguous instruction - going with modern approach
                     case 0x0055:
-                        for(uint16_t i = 0; i < instr & 0x0F00; i++) {
+                        for(uint16_t i = 0; i <= (instr & 0x0F00) >> 8; i++) {
                             firstAddressMemory[indexReg + i] = V[i];
                         }
                     break;
 
                     case 0x0065:
-                        for(uint16_t i = 0; i < instr & 0x0F00; i++) {
+                        for(uint16_t i = 0; i <= (instr & 0x0F00) >> 8; i++) {
                             V[i] = firstAddressMemory[indexReg + i];
                         }
                     break;
@@ -365,6 +369,7 @@ int main(int argc, char *argv[]) {
                 SDL_Delay(10000);
                 exit(EXIT_FAILURE);
         }
+
 
         done = processEvents(window);
         SDL_Delay(1000.0/FPS);

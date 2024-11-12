@@ -51,12 +51,12 @@ int processEvents(SDL_Window *window) {
 void draw(SDL_Renderer *renderer, uint16_t indexReg, uint16_t instr, uint8_t *V, uint8_t *firstAddressMemory,uint64_t *displayArr){
 
     int N = instr & 0x000F;
-    int x = V[instr & 0x0F00] % 64;
+    int x = V[(instr & 0x0F00) >> 8] % 64;
     int og_x = x;
-    int y = V[instr & 0x00F0] % 32;
+    int y = V[(instr & 0x00F0) >> 4] % 32;
     V[0xF] = 0;
 
-    // int spriteWidth = 8; int xOffset = (64 - spriteWidth) / 2; int yOffset = (32 - N) / 2; x = og_x + xOffset; y += yOffset;
+     //int spriteWidth = 8; int xOffset = (64 - spriteWidth) / 2; int yOffset = (32 - N) / 2; x = og_x + xOffset; y += yOffset;
     // Above line sets offset.  Examine later
 
    for(int i = 0; i < N; i++) {
@@ -105,9 +105,9 @@ void draw(SDL_Renderer *renderer, uint16_t indexReg, uint16_t instr, uint8_t *V,
             }
         }
     }
-
+   SDL_Delay(1000);
     SDL_RenderPresent(renderer);
-
+    printf("-------------------\n");
 
 
 }
