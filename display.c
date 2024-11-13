@@ -105,9 +105,11 @@ void draw(SDL_Renderer *renderer, uint16_t indexReg, uint16_t instr, uint8_t *V,
             }
         }
     }
-   SDL_Delay(1000);
+  //  SDL_Delay(1000);
     SDL_RenderPresent(renderer);
     printf("-------------------\n");
 
-
+    // for(int i = 0; i < 32; i++) {
+    //     displayArr[i] = 0;
+    // }
 }
