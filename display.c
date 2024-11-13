@@ -1,21 +1,48 @@
 #include "display.h"
 #include <stdio.h>
 
+
+// Map hex codes to SDL scancodes
+SDL_Scancode hexToScancode(uint8_t hex) {
+    switch (hex) {
+        case 0x0: return SDL_SCANCODE_0;
+        case 0x1: return SDL_SCANCODE_1;
+        case 0x2: return SDL_SCANCODE_2;
+        case 0x3: return SDL_SCANCODE_3;
+        case 0x4: return SDL_SCANCODE_4;
+        case 0x5: return SDL_SCANCODE_5;
+        case 0x6: return SDL_SCANCODE_6;
+        case 0x7: return SDL_SCANCODE_7;
+        case 0x8: return SDL_SCANCODE_8;
+        case 0x9: return SDL_SCANCODE_9;
+        case 0xA: return SDL_SCANCODE_A;
+        case 0xB: return SDL_SCANCODE_B;
+        case 0xC: return SDL_SCANCODE_C;
+        case 0xD: return SDL_SCANCODE_D;
+        case 0xE: return SDL_SCANCODE_E;
+        case 0xF: return SDL_SCANCODE_F;
+        default:  return SDL_SCANCODE_UNKNOWN;
+    }
+}
+
 bool keyHeldDown(uint8_t VX) {
     const uint8_t *state = SDL_GetKeyboardState(NULL);
-    return state[VX];
+    SDL_Scancode scancode = hexToScancode(VX);
+    return (scancode != SDL_SCANCODE_UNKNOWN) ? state[scancode] : false;
 }
+
 
 uint8_t detectKeyPress() {
     SDL_Event event;
 
-    while(SDL_PollEvent(&event)) {
-        if(event.type == SDL_KEYDOWN) {
-            return event.key.keysym.sym;
+    while (SDL_PollEvent(&event)) {
+        if (event.type == SDL_KEYDOWN) {
+            printf("!");
+            return event.key.keysym.scancode; // Return the scancode of the pressed key
         }
     }
-    return NULL;
 
+    return 0; // Return 0 if no key press is detected
 }
 
 int processEvents(SDL_Window *window) {
@@ -107,9 +134,5 @@ void draw(SDL_Renderer *renderer, uint16_t indexReg, uint16_t instr, uint8_t *V,
     }
   //  SDL_Delay(1000);
     SDL_RenderPresent(renderer);
-    printf("-------------------\n");
 
-    // for(int i = 0; i < 32; i++) {
-    //     displayArr[i] = 0;
-    // }
 }

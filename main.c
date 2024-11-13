@@ -8,7 +8,7 @@
 #include "display.h"
 #include "memory.h"
 
-#define FPS 60.0
+#define FPS 120.0
 
 
 int randInRange(int min, int max)
@@ -30,7 +30,7 @@ int main(int argc, char *argv[]) {
     uint64_t displayArr[32] = {0}; //Use to hold a monochromatic screen as an array. use bitshifts
 
     srand(time(NULL));
-    FILE *rom = fopen("D:/C/Chip8-Emulator-C/6-keypad.ch8", "rb");
+    FILE *rom = fopen("D:/C/Chip8-Emulator-C/Airplane.ch8", "rb");
 
     if(rom != NULL) {
         fseek(rom, 0, SEEK_END);
@@ -85,20 +85,24 @@ int main(int argc, char *argv[]) {
 
     renderer = SDL_CreateRenderer(window,-1,SDL_RENDERER_ACCELERATED);
 
+    time_t lastTime = time(NULL);
+
     int done = 0;
     while(!done) {
-
-        //TODO: Find a way to limit instructions per second to 700
-        //Timers
-        if(delayTimer > 0) {
+        time_t currentTime = time(NULL);
+        if(difftime(currentTime,lastTime) > 1.0) {
             delayTimer -= 60;
-        }
+            if(delayTimer < 0) {
+                delayTimer = 0;
+            }
 
-        if(soundTimer > 0) {
-            Beep(750,1000.0/FPS);
             soundTimer -= 60;
-        }
+            if(soundTimer < 0) {
+                soundTimer = 0;
+            }
 
+            lastTime = currentTime;
+        }
 
         uint16_t instr = (firstAddressMemory[PC] << 8) | firstAddressMemory[PC+1];
         PC += 2;
@@ -111,6 +115,9 @@ int main(int argc, char *argv[]) {
                  switch(instr & 0x0FFF) {
                      //Clear screen
                      case 0x00E0:
+                         for(int i = 0; i < 32; i++) {
+                             displayArr[i] = 0;
+                         }
                          SDL_RenderClear(renderer);
                      break;
 
@@ -146,7 +153,7 @@ int main(int argc, char *argv[]) {
                  if((uint16_t)V[(instr & 0x0F00) >> 8] == (uint16_t)(instr & 0x00FF)) {
                      PC += 2;
                  }
-             printf("-------------------\n");
+
              break;
 
              //Conditional skip
@@ -303,12 +310,12 @@ int main(int argc, char *argv[]) {
                      //Add to index
                      case 0x001E: // Some ambiguous behavior. See guide. Considering overflow here
                      {
-                         // if((int)indexReg + (int)V[(instr & 0x0F00) >> 8] > 0xFFF) {
-                         //     V[0xF] = 1;
-                         // }
-                         // else {
-                         //     V[0xF] = 0;
-                         // }
+                         if((int)indexReg + (int)V[(instr & 0x0F00) >> 8] > 0xFFF) {
+                             V[0xF] = 1;
+                         }
+                         else {
+                             V[0xF] = 0;
+                         }
 
                          indexReg += V[(instr & 0x0F00) >> 8];
 
@@ -318,12 +325,16 @@ int main(int argc, char *argv[]) {
 
                      //Get key
                      case 0x000A:
-                         PC -= 2;
-                         if(detectKeyPress()) {
-                             V[(instr & 0x0F00) >> 8] = detectKeyPress();
-                             PC += 2;
+                     {
+                         uint8_t key = detectKeyPress();
+                         if(key) {
+                             V[(instr & 0x0F00) >> 8] = key;
+                         } else {
+                             PC -= 2; // Stay in the same instruction if no key is detected
                          }
-                     break;
+                         break;
+                     }
+
 
                      //Font Character
                      case 0x0029:
@@ -364,9 +375,6 @@ int main(int argc, char *argv[]) {
                  SDL_Delay(10000);
                  exit(EXIT_FAILURE);
          }
-
-
-
 
         done = processEvents(window);
         SDL_Delay(1000.0/FPS);
